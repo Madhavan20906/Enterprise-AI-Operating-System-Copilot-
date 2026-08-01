@@ -72,14 +72,21 @@ export async function getMe() {
 export async function uploadDocument(file: File) {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch(`${API_V1}/documents/upload`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: formData,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Upload failed");
-  return data;
+  try {
+    const res = await fetch(`${API_V1}/documents/upload`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Upload failed");
+    return data;
+  } catch (err: any) {
+    if (err.name === "TypeError" && err.message === "Failed to fetch") {
+      throw new Error("Unable to reach backend server. Please verify backend is running on http://localhost:8000.");
+    }
+    throw err;
+  }
 }
 
 export async function getDocuments() {

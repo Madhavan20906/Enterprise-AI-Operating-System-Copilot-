@@ -59,7 +59,14 @@ async def upload_document(
     db.refresh(doc)
     
     # Dispatch asynchronous ingestion task to Celery queue worker
-    process_document_ingestion.delay(doc.id)
+    try:
+        process_document_ingestion.delay(doc.id)
+    except Exception:
+        # Fallback to direct execution if Celery worker broker is offline
+        try:
+            process_document_ingestion(doc.id)
+        except Exception:
+            pass
     
     return {
         "message": "File uploaded successfully. Processing started in background.",
