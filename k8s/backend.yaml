@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: enterprise-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+      - name: backend-api
+        image: enterprise-copilot-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgrespassword@postgres:5432/copilot"
+        - name: ASYNC_DATABASE_URL
+          value: "postgresql+asyncpg://postgres:postgrespassword@postgres:5432/copilot"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: QDRANT_HOST
+          value: "qdrant"
+        - name: NEO4J_URI
+          value: "bolt://neo4j:7687"
+        - name: NEO4J_USER
+          value: "neo4j"
+        - name: NEO4J_PASSWORD
+          value: "neo4jpassword"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-api
+  namespace: enterprise-ai
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: backend-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: enterprise-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+      - name: celery-worker
+        image: enterprise-copilot-backend:latest
+        imagePullPolicy: Never
+        command: ["celery", "-A", "app.infrastructure.celery.celery_app", "worker", "--loglevel=info"]
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgrespassword@postgres:5432/copilot"
+        - name: ASYNC_DATABASE_URL
+          value: "postgresql+asyncpg://postgres:postgrespassword@postgres:5432/copilot"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: QDRANT_HOST
+          value: "qdrant"
+        - name: NEO4J_URI
+          value: "bolt://neo4j:7687"
+        - name: NEO4J_USER
+          value: "neo4j"
+        - name: NEO4J_PASSWORD
+          value: "neo4jpassword"
