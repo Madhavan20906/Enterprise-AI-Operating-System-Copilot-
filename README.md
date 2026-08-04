@@ -6,14 +6,24 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-4B32C3?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 
-**A production-grade, multi-agent AI platform built for the enterprise.**  
+**A production-grade, multi-agent AI platform built for the enterprise.**
 Intelligent document understanding, real-time streaming chat, hybrid RAG, and autonomous agent orchestration — all in one system.
 
-[Features](#-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Tech Stack](#-tech-stack) • [API Docs](#-api-docs)
+[Features](#-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Tech Stack](#-tech-stack) • [Project Structure](#-project-structure) • [API Docs](#-api-docs) • [Roadmap](#️-roadmap) • [Contributing](#-contributing)
 
 </div>
+
+---
+
+## 📌 Overview
+
+Enterprise AI Operating System is a self-hostable platform that lets organizations turn their internal documents, projects, and teams into a queryable, agent-driven knowledge layer. Instead of a single chatbot bolted onto a vector store, it runs a **graph of specialized agents** — planning, retrieving, reasoning, reporting, coding, summarizing meetings, and automating workflows — coordinated by LangGraph and backed by a hybrid retrieval pipeline and a knowledge graph of how people, documents, and projects relate to one another.
+
+It's built to be run locally with Docker Compose for development, and to scale onto Kubernetes for production.
 
 ---
 
@@ -25,9 +35,9 @@ Intelligent document understanding, real-time streaming chat, hybrid RAG, and au
 - Agents collaborate autonomously to resolve complex enterprise queries
 
 ### 📚 Hybrid RAG Pipeline
-- **Dual-path retrieval**: Dense vector search (Qdrant) + keyword BM25 search
+- **Dual-path retrieval**: dense vector search (Qdrant) + keyword BM25 search
 - **Reciprocal Rank Fusion (RRF)** for result merging
-- **Cross-Encoder re-ranking** for precision-optimized answers
+- **Cross-encoder re-ranking** for precision-optimized answers
 - Layout-aware parsing, OCR fallback, parent-child chunking
 
 ### 🔐 Enterprise Auth & RBAC
@@ -36,7 +46,7 @@ Intelligent document understanding, real-time streaming chat, hybrid RAG, and au
 - Secure document access scoped to ownership and organizational hierarchy
 
 ### 📡 Real-Time Streaming
-- **Server-Sent Events (SSE)** for live token streaming from LLM
+- **Server-Sent Events (SSE)** for live token streaming from the LLM
 - Typing cursor indicator, agent step visibility, and full conversation history
 
 ### 🕸️ Knowledge Graph
@@ -50,9 +60,9 @@ Intelligent document understanding, real-time streaming chat, hybrid RAG, and au
 - Security audit logs for all user actions (admin-only)
 
 ### 📁 Document Management
-- Drag-and-drop ingestion supporting PDF, DOCX, PPTX, XLSX, CSV, TXT, MD, Images
+- Drag-and-drop ingestion supporting PDF, DOCX, PPTX, XLSX, CSV, TXT, MD, and images
 - Async background processing via **Celery** task queue
-- Auto document classification, deduplication via SHA-256 content hash
+- Auto document classification and deduplication via SHA-256 content hash
 - 50 MB file size support
 
 ---
@@ -62,23 +72,25 @@ Intelligent document understanding, real-time streaming chat, hybrid RAG, and au
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Next.js Frontend                      │
-│         /login  /register  /dashboard  /chat            │
-└──────────────────────┬──────────────────────────────────┘
-                       │ HTTP / SSE
-┌──────────────────────▼──────────────────────────────────┐
-│                   FastAPI Backend                        │
-│    Auth │ Users │ Documents │ Chat │ Analytics           │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │            LangGraph Agent Graph                │    │
-│  │  Planner → Retrieval → Reasoning → Report       │    │
-│  │           ↘ Code ↗ Meeting ↗ Workflow           │    │
-│  └─────────────────────────────────────────────────┘    │
-└──────┬───────────┬────────────┬────────────┬────────────┘
-       │           │            │            │
-  PostgreSQL    Qdrant       Redis         Neo4j
-  (Users/Docs) (Vectors)   (Cache/Queue) (Knowledge Graph)
+│         /login  /register  /dashboard  /chat             │
+└──────────────────────┬────────────────────────────────────┘
+                        │ HTTP / SSE
+┌──────────────────────▼────────────────────────────────────┐
+│                   FastAPI Backend                         │
+│    Auth │ Users │ Documents │ Chat │ Analytics            │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │              LangGraph Agent Graph                   │  │
+│  │  Planner → Retrieval → Reasoning → Report            │  │
+│  │           ↘ Code ↗ Meeting ↗ Workflow                │  │
+│  └─────────────────────────────────────────────────────┘  │
+└──────┬───────────┬────────────┬────────────┬───────────────┘
+       │            │            │            │
+  PostgreSQL     Qdrant        Redis         Neo4j
+  (Users/Docs)  (Vectors)   (Cache/Queue)  (Knowledge Graph)
 ```
+
+**Request flow:** the frontend calls the FastAPI backend over HTTP for standard operations and opens an SSE connection for chat. Incoming chat queries enter the LangGraph agent graph, where the Planner agent decides which downstream agents to invoke (Retrieval, Reasoning, Report, Code, Meeting, or Workflow), each of which may read from Postgres, Qdrant, Redis, or Neo4j before the final answer streams back token-by-token.
 
 ---
 
@@ -101,10 +113,22 @@ cp backend/.env.example backend/.env
 # Edit backend/.env and add your GROQ_API_KEY
 ```
 
+Key variables to set in `backend/.env`:
+
+| Variable | Description |
+|---|---|
+| `GROQ_API_KEY` | API key for Groq (LLaMA 3.3 70B inference) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `QDRANT_URL` | Qdrant vector database endpoint |
+| `REDIS_URL` | Redis connection string (cache + Celery broker) |
+| `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | Neo4j knowledge graph credentials |
+| `JWT_SECRET_KEY` | Secret used to sign JWT tokens |
+
 ### 3. Start infrastructure (Docker)
 ```bash
 docker-compose up -d
 ```
+This brings up PostgreSQL, Qdrant, Redis, and Neo4j.
 
 ### 4. Start the backend
 ```bash
@@ -116,7 +140,7 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 venv\Scripts\uvicorn.exe app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-> ⏳ Wait ~30–60 seconds for HuggingFace embedding models to load.  
+> ⏳ Wait ~30–60 seconds for HuggingFace embedding models to load.
 > You'll see `Application startup complete.` when ready.
 
 ### 5. Start the frontend (new terminal)
@@ -138,6 +162,7 @@ npm run dev
 Email:    admin@enterprise.com
 Password: AdminPassword123!
 ```
+> ⚠️ Change these immediately in any non-local environment.
 
 ---
 
@@ -193,19 +218,19 @@ enterprise-ai-os/
 │   │   ├── api/routes/      # FastAPI route handlers
 │   │   ├── domain/          # SQLAlchemy entities & enums
 │   │   ├── infrastructure/  # DB, Qdrant, Neo4j clients
-│   │   ├── core/            # Security, config, dependencies
-│   │   └── main.py          # App entrypoint
-│   ├── alembic/             # Database migrations
-│   ├── tests/               # Backend test suite
+│   │   ├── core/             # Security, config, dependencies
+│   │   └── main.py           # App entrypoint
+│   ├── alembic/              # Database migrations
+│   ├── tests/                # Backend test suite
 │   └── requirements.txt
 ├── frontend/
 │   └── src/app/
-│       ├── login/           # Auth pages
+│       ├── login/            # Auth pages
 │       ├── register/
-│       ├── dashboard/       # Knowledge base, analytics, graph, audit
-│       └── chat/            # Real-time streaming AI chat
-├── k8s/                     # Kubernetes manifests
-├── docker-compose.yml       # Local infrastructure
+│       ├── dashboard/        # Knowledge base, analytics, graph, audit
+│       └── chat/             # Real-time streaming AI chat
+├── k8s/                       # Kubernetes manifests
+├── docker-compose.yml          # Local infrastructure
 └── README.md
 ```
 
@@ -213,7 +238,7 @@ enterprise-ai-os/
 
 ## 📖 API Docs
 
-Once the backend is running, visit:  
+Once the backend is running, visit:
 **http://localhost:8000/api/v1/docs** — Interactive Swagger UI
 
 Key endpoints:
@@ -231,6 +256,17 @@ Key endpoints:
 
 ---
 
+## 🧪 Testing
+
+```bash
+cd backend
+pytest tests/ -v
+```
+
+CI-friendly test suite covers auth, document ingestion, retrieval, and agent routing logic.
+
+---
+
 ## 🗺️ Roadmap
 
 - [ ] Fix frontend–backend CORS on local dev
@@ -245,7 +281,13 @@ Key endpoints:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+Contributions are welcome!
+
+1. Open an issue first to discuss what you'd like to change.
+2. Fork the repo and create a feature branch (`git checkout -b feature/my-feature`).
+3. Make your changes with clear, focused commits.
+4. Ensure `pytest` passes and the frontend builds cleanly (`npm run build`).
+5. Open a pull request describing the change and why it's needed.
 
 ---
 
@@ -254,11 +296,3 @@ Contributions are welcome! Please open an issue first to discuss what you'd like
 MIT License — see [LICENSE](LICENSE) for details.
 
 ---
-
-<div align="center">
-
-Built with ❤️ by **Madhavan P**
-
-</div>
-"# Enterprise-AI-Operating-System-Copilot-" 
-"# Enterprise-AI-Operating-System-Copilot-" 
